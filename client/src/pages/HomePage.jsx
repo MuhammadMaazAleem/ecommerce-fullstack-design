@@ -1,6 +1,11 @@
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
+import { fetchFeaturedProducts, clearProductError } from '../features/products/productSlice';
+import { addToCart, clearCartError } from '../features/cart/cartSlice';
 
 const dealItems = [
   { name: 'Smart watches', discount: '-25%', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300' },
@@ -9,25 +14,6 @@ const dealItems = [
   { name: 'Headphones', discount: '-25%', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300' },
   { name: 'Canon cameras', discount: '-25%', image: 'https://images.unsplash.com/photo-1516724562728-afc824a36e84?w=300' },
 ];
-
-const recommended = [
-  'T-shirt',
-  'Jacket',
-  'Blazer coat',
-  'Jeans bag',
-  'Leather wallet',
-  'Denim jeans',
-  'Headphones',
-  'Smartwatch',
-  'Water jug',
-  'Travel mug',
-].map((name, i) => ({
-  id: i + 1,
-  name,
-  price: (45 + i * 8).toFixed(2),
-  description: 'Best quality product from top suppliers',
-  image: `https://picsum.photos/seed/reco-${i + 1}/300/220`,
-}));
 
 const services = [
   'Source from Industry Hubs',
@@ -39,13 +25,48 @@ const services = [
 const countries = ['UAE', 'Australia', 'United States', 'Russia', 'Italy', 'Denmark', 'France', 'Arabic Emirates', 'China', 'Great Britain'];
 
 function HomePage() {
+  const dispatch = useDispatch();
+  const {
+    featured,
+    featuredLoading,
+    error: productError,
+  } = useSelector((state) => state.products);
+  const { error: cartError } = useSelector((state) => state.cart);
+
+  useEffect(() => {
+    dispatch(fetchFeaturedProducts());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (productError) {
+      toast.error(productError);
+      dispatch(clearProductError());
+    }
+  }, [dispatch, productError]);
+
+  useEffect(() => {
+    if (cartError) {
+      toast.error(cartError);
+      dispatch(clearCartError());
+    }
+  }, [dispatch, cartError]);
+
+  const handleAddToCart = async (productId) => {
+    try {
+      await dispatch(addToCart({ productId, quantity: 1 })).unwrap();
+      toast.success('Added to cart');
+    } catch (error) {
+      toast.error(error);
+    }
+  };
+
   return (
     <div>
       <Navbar />
 
       <main className="container-shell space-y-8 py-6">
-        <section className="grid gap-4 lg:grid-cols-[240px_1fr_280px]">
-          <aside className="panel hidden p-4 lg:block">
+        <section className="grid gap-4 lg:grid-cols-12">
+          <aside className="panel hidden p-4 lg:col-span-3 lg:block">
             <ul className="space-y-2 text-sm text-slate-700">
               {['Automobiles', 'Clothes and wear', 'Home interiors', 'Computer and tech', 'Tools', 'Sports and outdoor', 'Animal and pets', 'Machinery tools', 'More category'].map((item) => (
                 <li key={item} className="rounded px-2 py-1 hover:bg-slate-100">{item}</li>
@@ -53,14 +74,14 @@ function HomePage() {
             </ul>
           </aside>
 
-          <div className="panel relative overflow-hidden p-6" style={{ background: 'linear-gradient(120deg, var(--hero-a), var(--hero-b))' }}>
+          <div className="panel overflow-hidden p-6 lg:col-span-6" style={{ background: 'linear-gradient(120deg, var(--hero-a), var(--hero-b))' }}>
             <p className="text-sm font-medium text-slate-700">Latest trending</p>
             <h1 className="mt-1 max-w-sm font-display text-3xl font-bold text-slate-900">Electronic items</h1>
             <button className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Learn more</button>
-            <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=620" alt="Hero product" className="mt-4 h-56 w-full rounded-lg object-cover lg:absolute lg:bottom-6 lg:right-6 lg:mt-0 lg:h-44 lg:w-64" />
+            <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=620" alt="Hero product" className="mt-5 h-56 w-full rounded-lg object-cover" />
           </div>
 
-          <aside className="space-y-4">
+          <aside className="space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:col-span-3 lg:block lg:space-y-4">
             <div className="panel p-4">
               <p className="text-sm text-slate-600">Hi, user lets get started</p>
               <button className="mt-3 w-full rounded bg-brand-500 py-2 text-sm font-semibold text-white">Join now</button>
@@ -148,11 +169,31 @@ function HomePage() {
 
         <section>
           <h2 className="section-title mb-4">Recommended items</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {recommended.map((product) => (
-              <ProductCard key={product.id} product={product} compact showDescription />
-            ))}
-          </div>
+          {featuredLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {Array.from({ length: 5 }, (_, index) => (
+                <article key={index} className="panel overflow-hidden p-3">
+                  <div className="h-28 w-full animate-pulse rounded-lg bg-slate-200" />
+                  <div className="mt-3 h-4 w-3/4 animate-pulse rounded bg-slate-200" />
+                  <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-slate-200" />
+                </article>
+              ))}
+            </div>
+          ) : featured.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {featured.map((product) => (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  compact
+                  showDescription
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="panel p-4 text-sm text-slate-600">No featured products available right now.</div>
+          )}
         </section>
 
         <section>
@@ -182,7 +223,7 @@ function HomePage() {
         <section className="panel bg-slate-50 p-6 text-center">
           <h3 className="font-display text-2xl font-semibold">Subscribe on our newsletter</h3>
           <p className="mt-2 text-sm text-slate-500">Get daily news on upcoming offers from many suppliers all over the world</p>
-          <div className="mx-auto mt-4 flex max-w-md gap-2">
+          <div className="mx-auto mt-4 flex max-w-md flex-col gap-2 sm:flex-row">
             <input className="w-full rounded border border-slate-300 px-3 py-2" placeholder="Email" />
             <button className="rounded bg-brand-500 px-4 py-2 font-semibold text-white">Subscribe</button>
           </div>

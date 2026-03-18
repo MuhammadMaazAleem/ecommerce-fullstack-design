@@ -17,10 +17,22 @@
 body {
   @apply font-body text-gray-800;
   background: radial-gradient(circle at top right, #fff6d9 0%, #eef4ff 45%, #f4f7fb 100%);
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 .container-shell {
-  @apply mx-auto w-full max-w-[1280px] px-4 md:px-6;
+  @apply mx-auto w-full max-w-none px-3 sm:px-4 lg:px-6 xl:px-8;
 }
 
 .panel {
